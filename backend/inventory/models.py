@@ -22,13 +22,23 @@ class ProductUnit(models.Model):
         related_name="units",
         verbose_name="Заказ-основание"
     )
+
+    # НОВОЕ ПОЛЕ: Фиксируем цену закупки в момент приемки
+    purchase_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Цена закупки (ед)"
+    )
     
     on_stock = models.BooleanField(default=True, verbose_name="В наличии")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата приемки")
 
     def __str__(self):
-        return f"{self.product.name} (Unit: {self.id})"
+        # Сделаем вывод более информативным: Товар + короткий ID + Цена
+        return f"{self.product.name} [ID: {str(self.id)[:8]}] - {self.purchase_price} руб."
 
     class Meta:
         verbose_name = "Единица товара"
         verbose_name_plural = "Единицы товара"
+        ordering = ['-created_at'] # Свежие поступления вверху списка
