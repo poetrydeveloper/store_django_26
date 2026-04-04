@@ -6,5 +6,4 @@ class DeliveriesConfig(AppConfig):
     verbose_name = 'Приемка товаров'
 
     def ready(self):
-        # Вот здесь теперь живет магия создания товара!
-        import deliveries.signals 
+        import deliveries.signals

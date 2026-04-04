@@ -1,51 +1,64 @@
+# app/inventory/admin.py
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
 from .models import ProductUnit
+
 
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    # Добавляем цену и заказ в список, чтобы видеть всю картину сразу
     list_display = (
         'short_id', 
         'product', 
-        'purchase_price',  # Видим цену закупки
+        'purchase_price',
+        'status_card',
+        'status_physical',
         'on_stock', 
-        'source_order_link', # Видим ссылку на заказ
+        'source_order_link',
         'created_at'
     )
     
-    # Фильтры: добавили фильтр по наличию и дате приемки
-    list_filter = ('on_stock', 'created_at', 'product__brand')
+    list_filter = ('on_stock', 'status_card', 'status_physical', 'created_at', 'product__brand')
+    search_fields = ('id', 'product__name', 'product__code', 'serial_number')
+    readonly_fields = ('id', 'created_at', 'received_at')
     
-    # Поиск: добавили поиск по ID и названию товара
-    search_fields = ('id', 'product__name', 'product__code')
-    
-    # Поля только для чтения
-    readonly_fields = ('id', 'created_at', 'source_order', 'purchase_price')
-
-    # Удобная группировка полей в карточке юнита
     fieldsets = (
         ('Основная информация', {
-            'fields': ('id', 'product', 'on_stock')
+            'fields': ('id', 'product', 'serial_number')
         }),
-        ('Экономика и происхождение', {
-            'fields': ('purchase_price', 'source_order', 'created_at'),
-            'description': "Данные заполняются автоматически при приемке товара по заявке."
+        ('Статусы', {
+            'fields': ('status_card', 'status_physical', 'on_stock')
+        }),
+        ('Цены', {
+            'fields': ('purchase_price', 'sale_price')
+        }),
+        ('Контрагенты', {
+            'fields': ('supplier', 'customer')
+        }),
+        ('Связи', {
+            'fields': ('source_order_item',)
+        }),
+        ('Даты', {
+            'fields': ('created_at', 'received_at', 'sold_at', 'returned_at')
         }),
     )
 
-    # Метод для красивого отображения короткого ID
-    @admin.display(description="ID Юнита")
+    @admin.display(description="ID")
     def short_id(self, obj):
         return str(obj.id)[:8]
 
-    # Метод для отображения ссылки на заказ (если он есть)
     @admin.display(description="Заказ-основание")
     def source_order_link(self, obj):
-        if obj.source_order:
-            return f"Заявка #{str(obj.source_order.id)[:8]}"
+        if obj.source_order_item:
+            order = obj.source_order_item.order
+            return format_html(
+                '<a href="{}">Заявка #{}</a> (позиция: {})',
+                reverse('admin:orders_order_change', args=[order.id]),
+                str(order.id)[:8],
+                obj.source_order_item.product.name
+            )
         return "—"
-
-    # Запрещаем создавать юниты вручную через админку (они должны лететь из Заявок)
-    # Если хочешь оставить возможность ручного создания, просто удали этот метод
+    
+    # Разрешаем создание кандидатов вручную
     def has_add_permission(self, request):
-        return False 
+        return True
